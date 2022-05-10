@@ -5,3 +5,4 @@ defaults:
   - override /models@_group_: panoptic/default
 
 name: panoptic
+batch_size: 1

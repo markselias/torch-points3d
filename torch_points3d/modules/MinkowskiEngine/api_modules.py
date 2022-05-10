@@ -252,7 +252,6 @@ class ResNetDown(ME.MinkowskiNetwork):
             conv1_output = down_conv_nn[0]
         else:
             conv1_output = down_conv_nn[1]
-
         self.conv_in = (
             Seq()
             .append(

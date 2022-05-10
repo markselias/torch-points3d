@@ -1,0 +1,2 @@
+#!/bin/bash
+docker run -it --rm -v $1/data:/tp3d/data -v $1/outputs:/tp3d/outputs torch-points-3d python train.py task=panoptic models=panoptic/pointgroup  model_name=PointGroup-PAPER data=panoptic/sbub

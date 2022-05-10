@@ -1,0 +1,38 @@
+# @package data
+defaults:
+  - panoptic/default
+
+task: panoptic
+class: sbub.SBUBDataset
+dataroot: data
+fold: 5
+first_subsampling: 0.002
+grid_size: ${data.first_subsampling}
+keep_instance: True
+use_category: False
+mode: last
+pre_collate_transform:
+  - transform: SaveOriginalPosId # Required so that one can recover the original point in the fused point cloud
+  - transform: GridSampling3D # Samples on a grid
+    params:
+      size: ${data.first_subsampling}
+
+train_transforms:
+  - transform: Random3AxisRotation
+    params:
+      apply_rotation: True
+      rot_x: 360
+      rot_y: 360
+      rot_z: 360
+  - transform: GridSampling3D
+    params:
+      size: ${data.first_subsampling}
+      quantize_coords: True
+      mode: ${data.mode}
+test_transform:
+  - transform: GridSampling3D
+    params:
+      size: ${data.first_subsampling}
+      quantize_coords: True
+      mode: ${data.mode}
+val_transform: ${data.test_transform}

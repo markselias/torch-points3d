@@ -51,13 +51,13 @@ PointGroup:
       aggr: "max"
       nn: [ 4*in_feat, in_feat ]
 
-  prepare_epoch: 120
+  prepare_epoch: 150
   cluster_radius_search: 1.5 * ${data.grid_size}
 
   min_iou_threshold: 0.25
   max_iou_threshold: 0.75
 
-  vizual_ratio: 0
+  vizual_ratio: 0.01
 
 PointGroup-PAPER:
   class: pointgroup.PointGroup
@@ -149,10 +149,10 @@ PointGroup-PAPER:
       aggr: "max"
       nn: [ 4*in_feat, in_feat ]
 
-  prepare_epoch: 120
+  prepare_epoch: 150
   cluster_radius_search: 1.5 * ${data.grid_size}
 
   min_iou_threshold: 0.25
   max_iou_threshold: 0.75
 
-  vizual_ratio: 0
+  vizual_ratio: 0.01

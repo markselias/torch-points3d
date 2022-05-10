@@ -69,24 +69,25 @@ def main(cfg):
     # Setup the dataset config
     # Generic config
     train_dataset_cls = get_dataset_class(checkpoint.data_config)
-    setattr(checkpoint.data_config, "class", train_dataset_cls.FORWARD_CLASS)
-    setattr(checkpoint.data_config, "dataroot", cfg.input_path)
+    # setattr(checkpoint.data_config, "class", train_dataset_cls.FORWARD_CLASS)
+    # # setattr(checkpoint.data_config, "dataroot", cfg.input_path)
 
-    # Datset specific configs
-    if cfg.data:
-        for key, value in cfg.data.items():
-            checkpoint.data_config.update(key, value)
-    if cfg.dataset_config:
-        for key, value in cfg.dataset_config.items():
-            checkpoint.dataset_properties.update(key, value)
+    # # Datset specific configs
+    # if cfg.data:
+    #     for key, value in cfg.data.items():
+    #         checkpoint.data_config.update(key, value)
+    # if cfg.dataset_config:
+    #     for key, value in cfg.dataset_config.items():
+    #         checkpoint.dataset_properties.update(key, value)
 
     # Create dataset and mdoel
-    model = checkpoint.create_model(checkpoint.dataset_properties, weight_name=cfg.weight_name)
+    dataset = instantiate_dataset(checkpoint.data_config)
+    model = checkpoint.create_model(dataset, weight_name=cfg.weight_name)
     log.info(model)
     log.info("Model size = %i", sum(param.numel() for param in model.parameters() if param.requires_grad))
 
     # Set dataloaders
-    dataset = instantiate_dataset(checkpoint.data_config)
+    
     dataset.create_dataloaders(
         model,
         cfg.batch_size,

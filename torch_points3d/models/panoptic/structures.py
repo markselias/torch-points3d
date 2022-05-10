@@ -38,6 +38,8 @@ class PanopticResults(NamedTuple):
         proposals_pn_h = proposals_pointnum.unsqueeze(-1).repeat(1, proposals_pointnum.shape[0])
         proposals_pn_v = proposals_pointnum.unsqueeze(0).repeat(proposals_pointnum.shape[0], 1)
         cross_ious = intersection / (proposals_pn_h + proposals_pn_v - intersection)
+        if (cross_ious == None) or (self.cluster_scores == None):
+            return []
         pick_idxs = non_max_suppression(cross_ious.cpu().numpy(), self.cluster_scores.cpu().numpy(), nms_threshold)
 
         valid_pick_ids = []

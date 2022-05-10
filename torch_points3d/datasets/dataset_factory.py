@@ -44,4 +44,5 @@ def instantiate_dataset(dataset_config) -> BaseDataset:
     """
     dataset_cls = get_dataset_class(dataset_config)
     dataset = dataset_cls(dataset_config)
+    print(dataset.train_dataset.__getitem__(0))
     return dataset

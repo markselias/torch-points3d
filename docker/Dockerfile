@@ -32,6 +32,8 @@ COPY torch_points3d/__init__.py torch_points3d/__init__.py
 COPY README.md README.md
 RUN pip3 install . && rm -rf /root/.cache
 
+RUN pip3 install torch-sparse==0.6.12
+
 COPY . .
 
 # Setup location of model for forward inference

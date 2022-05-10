@@ -107,6 +107,7 @@ class SegmentationTracker(BaseTracker):
         return self._metric_func
 
     def publish_to_wandb(self, metrics, epoch):
+        # return
         super().publish_to_wandb(metrics, epoch)
 
         # write confusion matrix out to wandb
@@ -122,7 +123,6 @@ class SegmentationTracker(BaseTracker):
             "Predicted": "Predicted",
             "nPredictions": "nPredictions",
         }
-
         cm = wandb.plot_table(
             "wandb/confusion_matrix/v1",
             wandb.Table(columns=["Actual", "Predicted", "nPredictions"], data=stacked),

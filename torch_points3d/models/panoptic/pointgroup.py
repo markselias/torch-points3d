@@ -4,6 +4,8 @@ from torch_points_kernels import region_grow
 from torch_geometric.data import Data
 from torch_scatter import scatter
 import random
+import open3d as o3d
+import matplotlib.cm
 
 from torch_points3d.datasets.segmentation import IGNORE_LABEL
 from torch_points3d.models.base_model import BaseModel
@@ -80,7 +82,8 @@ class PointGroup(BaseModel):
         cluster_type = None
         if epoch == -1 or epoch > self.opt.prepare_epoch:  # Active by default
             all_clusters, cluster_type = self._cluster(semantic_logits, offset_logits)
-            if len(all_clusters):
+            if len(all_clusters) > 2:
+                # print("#####################################", len(all_clusters))
                 cluster_scores = self._compute_score(all_clusters, backbone_features, semantic_logits)
 
         self.output = PanopticResults(
@@ -90,7 +93,6 @@ class PointGroup(BaseModel):
             cluster_scores=cluster_scores,
             cluster_type=cluster_type,
         )
-
         # Sets visual data for debugging
         with torch.no_grad():
             self._dump_visuals(epoch)
@@ -105,6 +107,7 @@ class PointGroup(BaseModel):
             ignore_labels=self._stuff_classes.to(self.device),
             radius=self.opt.cluster_radius_search,
         )
+        # clusters_pos = []
         clusters_votes = region_grow(
             self.raw_pos + offset_logits,
             predicted_labels,
@@ -115,6 +118,7 @@ class PointGroup(BaseModel):
         )
 
         all_clusters = clusters_pos + clusters_votes
+        # all_clusters = clusters_votes
         all_clusters = [c.to(self.device) for c in all_clusters]
         cluster_type = torch.zeros(len(all_clusters), dtype=torch.uint8).to(self.device)
         cluster_type[len(clusters_pos) :] = 1
@@ -221,10 +225,14 @@ class PointGroup(BaseModel):
             data_visual.semantic_pred = torch.max(self.output.semantic_logits, -1)[1]
             data_visual.vote = self.output.offset_logits
             nms_idx = self.output.get_instances()
-            if self.output.clusters is not None:
+            if self.output.clusters is not None and (not self.training):
                 data_visual.clusters = [self.output.clusters[i].cpu() for i in nms_idx]
                 data_visual.cluster_type = self.output.cluster_type[nms_idx]
-            if not os.path.exists("viz"):
-                os.mkdir("viz")
-            torch.save(data_visual.to("cpu"), "viz/data_e%i_%i.pt" % (epoch, self.visual_count))
+                # pcd = o3d.geometry.Pointcloud()
+                # pcd.points = o3d.utility.Vector3dVector(self.raw_pos)
+                # cmap = matplotlib.cm.get_cmap('tab20')
+                
+                if not os.path.exists("viz"):
+                    os.mkdir("viz")
+                torch.save(data_visual.to("cpu"), "viz/data_e%i_%i.pt" % (epoch, self.visual_count))
             self.visual_count += 1

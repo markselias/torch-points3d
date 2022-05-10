@@ -28,6 +28,16 @@ COPY pyproject.toml pyproject.toml
 COPY torch_points3d/__init__.py torch_points3d/__init__.py
 COPY README.md README.md
 
-RUN pip3 install . && rm -rf /root/.cache
+RUN pip3 -v install ipdb
+RUN pip3 -v install . && rm -rf /root/.cache 
+
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    libgl1 \
+    libgomp1 \
+    libusb-1.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install open3d==0.14.1
+RUN pip install wandb --upgrade
 
 COPY . .

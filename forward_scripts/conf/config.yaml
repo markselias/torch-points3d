@@ -1,13 +1,13 @@
 num_workers: 2
-batch_size: 16
+batch_size: 1
 cuda: 0
-weight_name: "miou" # Used during resume, select with model to load from [miou, macc, acc..., latest]
+weight_name: "Iacc" # Used during resume, select with model to load from [miou, macc, acc..., latest]
 enable_cudnn: True
-checkpoint_dir: "/home/nicolas/deeppointcloud-benchmarks/outputs/2020-02-24/15-02-47" # "{your_path}/outputs/2020-01-28/11-04-13" for example
-model_name: TOTO
+checkpoint_dir: "/tp3d/outputs/2022-03-16/14-25-38" # "{your_path}/outputs/2020-01-28/11-04-13" for example
+model_name: PointGroup-PAPER
 enable_dropout: False
-output_path: "/home/nicolas/deeppointcloud-benchmarks/forward_scripts/out" # Where the output goes
-input_path: "/home/nicolas/deeppointcloud-benchmarks/forward_scripts/test_data" # Folder where to find the data
+output_path: "${checkpoint_dir}/out" # Where the output goes
+input_path: "/tp3d/data/test" # Folder where to find the data
 
 # Dataset specific
 defaults:

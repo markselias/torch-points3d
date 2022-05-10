@@ -188,6 +188,7 @@ class BaseDataset:
         if is_dense:
             return batch[key][index]
         else:
+            import ipdb;ipdb.set_trace()
             return batch[key][batch.batch == index]
 
     def create_dataloaders(
