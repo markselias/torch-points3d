@@ -3,7 +3,7 @@ task: segmentation
 class: sbub.SBUBDataset
 dataroot: data
 fold: 5
-first_subsampling: 0.001
+first_subsampling: 0.003
 use_category: False
 # pre_collate_transform:
 #     # - transform: PointCloudFusion   # One point cloud per area
