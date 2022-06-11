@@ -29,8 +29,13 @@ from torch_points3d.datasets.base_dataset import BaseDataset
 # from ipb_planters_toolkit import data_processor
 # from ipb_planters_toolkit.utils import SerializablePcdT, pcd_select_by_id, visualize_o3d, SerializablePcd, SerializableMesh, cache, np2o3d
 
+
 class SerializablePcdT:
-    def __init__(self, pcd: o3d.t.geometry.PointCloud, attributes=["colors", "normals", "leaf_ids", "plant_ids", "confidence", "label", "keypt_ids"]):
+    def __init__(
+        self,
+        pcd: o3d.t.geometry.PointCloud,
+        attributes=["colors", "normals", "leaf_ids", "plant_ids", "confidence", "label", "keypt_ids"],
+    ):
         self.attributes = attributes
         self.points = pcd.point["positions"].numpy()
         for attr in self.attributes:
@@ -44,10 +49,11 @@ class SerializablePcdT:
             if hasattr(self, attr):
                 pcd.point[attr] = o3d.core.Tensor(getattr(self, attr))
         return pcd
-    
+
+
 def pcd_select_by_id(pcd, ids):
     ids = np.squeeze(ids)
-    attributes=["colors", "normals", "leaf_ids", "plant_ids", "confidence", "label"]
+    attributes = ["colors", "normals", "leaf_ids", "plant_ids", "confidence", "label"]
 
     pcd.point["positions"] = o3d.core.Tensor(pcd.point["positions"].numpy()[ids])
     for attr in attributes:
@@ -59,10 +65,21 @@ def pcd_select_by_id(pcd, ids):
     # pcd.point["confidence"] = o3d.core.Tensor(pcd.point["confidence"].numpy()[ids])
     return pcd
 
+
 class DataProcessor:
-    def readPcd(self, pcd_path, center_from_points=True, mm_format=False, 
-                 estimate_normals=False, parse_labels=False, parse_keypoints=False,
-                 downsample_size=0.001, center_on_origin=True, n_keypoint_types=4, return_center_points=False):
+    def readPcd(
+        self,
+        pcd_path,
+        center_from_points=True,
+        mm_format=False,
+        estimate_normals=False,
+        parse_labels=False,
+        parse_keypoints=False,
+        downsample_size=0.001,
+        center_on_origin=True,
+        n_keypoint_types=4,
+        return_center_points=False,
+    ):
         # if not center_from_points and plant_center_path == None:
         #     raise ValueError("No plant center path specified and it's not computed from points.")
         # loading full plant
@@ -90,46 +107,43 @@ class DataProcessor:
             plant_center[2] = ply_pcd.get_min_bound()[2]
             plant_center = plant_center.numpy()
 
-
         if parse_keypoints:
             leaf_list = self.compute_leaf_list(ply_pcd)
-            
+
             # keypoints = ply_pcd.get_keypoints()
-            plant_keypoints = np.zeros((np.max(leaf_list).astype(int)+1, n_keypoint_types, 3))
-            
+            plant_keypoints = np.zeros((np.max(leaf_list).astype(int) + 1, n_keypoint_types, 3))
+
             for leaf_it in leaf_list:
                 if leaf_it < 0:
                     continue
                 leaf_mask = torch.tensor(ply_pcd.point["leaf_ids"].numpy()) == leaf_it
                 if ply_pcd.point.__contains__("keypt_ids"):
                     keypoint_field = "keypt_ids"
-                    keypts_mask = torch.tensor(
-                        ply_pcd.point[keypoint_field].numpy()) == torch.tensor([1, 2, 3, 4])
+                    keypts_mask = torch.tensor(ply_pcd.point[keypoint_field].numpy()) == torch.tensor([1, 2, 3, 4])
                 elif ply_pcd.point.__contains__("keypoint_ids"):
                     keypoint_field = "keypoint_ids"
-                    keypts_mask = torch.tensor(
-                        ply_pcd.point[keypoint_field].numpy()) == torch.tensor([0,1,2,3])
+                    keypts_mask = torch.tensor(ply_pcd.point[keypoint_field].numpy()) == torch.tensor([0, 1, 2, 3])
                 else:
-                    assert(False, "No keypoint field in pcd")
+                    assert (False, "No keypoint field in pcd")
                 combined_mask = torch.logical_and(leaf_mask, keypts_mask)
-                
+
                 plant_pcd = torch.tensor(ply_pcd.point["positions"].numpy())
-                
+
                 # for every leaf compute the centroid of the points labeled as keypoints
                 leaf_keypoints = np.zeros((n_keypoint_types, 3))
                 for i in range(4):
-                    leaf_keypoints[i,:] = torch.mean(plant_pcd[combined_mask[:, i]], axis=0)
+                    leaf_keypoints[i, :] = torch.mean(plant_pcd[combined_mask[:, i]], axis=0)
                 plant_keypoints[int(leaf_it)] = leaf_keypoints
             if center_on_origin:
                 plant_keypoints -= plant_center
-                
+
         # downsample pcd
         ply_pcd.voxel_down_sample(voxel_size=downsample_size)
-        
+
         if center_on_origin:
-            ply_pcd.translate(0-plant_center)
+            ply_pcd.translate(0 - plant_center)
         if mm_format:
-            ply_pcd.scale(1000, o3d.core.Tensor((0.,0.,0.), dtype=o3d.core.Dtype.Float32))
+            ply_pcd.scale(1000, o3d.core.Tensor((0.0, 0.0, 0.0), dtype=o3d.core.Dtype.Float32))
             plant_keypoints *= 1000
 
         # # downsample (and estimate normals)
@@ -141,38 +155,37 @@ class DataProcessor:
 
         # finally translate also the plant center :)
         if center_on_origin:
-            plant_center-=plant_center
-            
+            plant_center -= plant_center
+
         return_elements = [full_pcd, plant_center]
 
         if parse_keypoints:
             return_elements.append(plant_keypoints)
-        
+
         if return_center_points:
             return_elements.append(center_points)
-        
-        return return_elements
 
+        return return_elements
 
     def writePcd(self, pcd_path, points, colors, labels=None):
         device = o3d.core.Device("CPU:0")
         dtype = o3d.core.float32
         pcd = o3d.t.geometry.PointCloud(device)
         pcd.point["positions"] = o3d.core.Tensor(points, dtype, device)
-        pcd.point["colors"] = o3d.core.Tensor(colors, dtype, device)        
-        if labels is not None: 
-            pcd.point["leaf_ids"] = o3d.core.Tensor(labels, o3d.core.int32, device)    
-        
+        pcd.point["colors"] = o3d.core.Tensor(colors, dtype, device)
+        if labels is not None:
+            pcd.point["leaf_ids"] = o3d.core.Tensor(labels, o3d.core.int32, device)
+
         o3d.t.io.write_point_cloud(pcd_path, pcd)
-        
+
     def compute_leaf_list(self, pcd):
-        leaf_label_list = np.unique(
-                    pcd.point["leaf_ids"].numpy())
+        leaf_label_list = np.unique(pcd.point["leaf_ids"].numpy())
         # filter nans
         leaf_label_list = leaf_label_list[~np.isnan(leaf_label_list)]
         # remove plant center
         leaf_label_list = leaf_label_list[leaf_label_list >= 0]
         return leaf_label_list
+
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 log = logging.getLogger(__name__)
@@ -282,7 +295,7 @@ class S3DIS1x1Dataset(BaseDataset):
 
 
 class SBUBData(InMemoryDataset):
-    """ Sugar Beets Uni Bonn dataset loader. This dataset contains point clouds of sugar beet breeding plots.
+    """Sugar Beets Uni Bonn dataset loader. This dataset contains point clouds of sugar beet breeding plots.
 
     Parameters
     ----------
@@ -296,6 +309,7 @@ class SBUBData(InMemoryDataset):
     transform
     pre_filter
     """
+
     download_url = "/media/elias/Data/SBUB3D.zip"
     zip_name = "SBUB3D.zip"
     file_name = "SBUB3D"
@@ -397,26 +411,30 @@ class SBUBData(InMemoryDataset):
                 shutil.rmtree(self.raw_dir)
                 os.makedirs(self.raw_dir)
                 self.download()
-                
+
     def process_one(self, file):
-        plant_pcd, center, keypoints = data_proc.readPcd(os.path.join(
-        self.root, "raw", file), parse_labels=True, center_on_origin=False, parse_keypoints=True, downsample_size=0.001)
-        
+        plant_pcd, center = data_proc.readPcd(
+            os.path.join(self.root, "raw", file),
+            parse_labels=True,
+            center_on_origin=False,
+            parse_keypoints=False,
+            downsample_size=0.001,
+        )
+
         plant_pcd = plant_pcd.to_open3d()
         if plant_pcd.point.__contains__("plant_ids"):
             plant_mask = np.where(plant_pcd.point["plant_ids"].numpy() >= 0)[0]
             plant_pcd = pcd_select_by_id(plant_pcd, plant_mask)
-        
+
         current_leaf_label_list = data_proc.compute_leaf_list(plant_pcd)
-        
-        
+
         # keypoint_vectors = self.compute_keypoint_vectors(plant_pcd, keypoints, current_leaf_label_list)
-        
+
         xyz = torch.tensor(plant_pcd.point["positions"].numpy()).float()
         semantic_labels = torch.ones(len(plant_pcd.point["positions"].numpy())).long().squeeze()
         rgb = torch.tensor(plant_pcd.point["colors"].numpy()).float()
         data_type = file.split("/")[0]
-        
+
         data = Data(pos=xyz, y=semantic_labels, rgb=rgb)
         data.set = data_type
         instance_labels = torch.tensor(plant_pcd.point["leaf_ids"].numpy()).long().squeeze()
@@ -426,18 +444,16 @@ class SBUBData(InMemoryDataset):
 
     def process(self):
         if not os.path.exists(self.pre_processed_path):
-            train_files = ["train/"+f for f in os.listdir(osp.join(self.root, "raw", "train"))]
-            val_files = ["val/"+f for f in os.listdir(osp.join(self.root, "raw", "val"))]
-            test_files = ["test/"+f for f in os.listdir(osp.join(self.root, "raw", "test"))]
-            
+            train_files = ["train/" + f for f in os.listdir(osp.join(self.root, "raw", "train"))]
+            val_files = ["val/" + f for f in os.listdir(osp.join(self.root, "raw", "val"))]
+            test_files = ["test/" + f for f in os.listdir(osp.join(self.root, "raw", "test"))]
+
             data_list = []
-            
-            
-            
+
             for file in tq(train_files + val_files + test_files):
                 data = self.process_one(file)
                 data_list.append(data)
-                
+
             # raw_areas = cT.PointCloudFusion()(data_list)
             # for i, area in enumerate(raw_areas):
             #     torch.save(area, self.raw_areas_paths[i])
@@ -453,7 +469,6 @@ class SBUBData(InMemoryDataset):
 
         if self.debug:
             return
-        
 
         train_data_list = []
         val_data_list = []
@@ -499,7 +514,7 @@ class SBUBData(InMemoryDataset):
 
     def _load_data(self, path):
         self.data = torch.load(path)
-        
+
     # def __init__(self, root, sample_per_epoch=100, *args, **kwargs):
     #     self._sample_per_epoch = sample_per_epoch
     #     super().__init__(root, *args, **kwargs)
@@ -517,19 +532,19 @@ class SBUBData(InMemoryDataset):
         data = self._get_item(idx, subsample=True)
         setattr(data, "sampleid", torch.tensor([idx]))
         return data
-    
+
     def _get_item(self, idx, subsample=False):
         chosen_plant = idx % len(self.data)
         data = self.data[chosen_plant]
-        
+
         # subsampling mask
         num_points = data.pos.shape[0]
-        mask = np.zeros(num_points, dtype='bool')
+        mask = np.zeros(num_points, dtype="bool")
         mask[:100000] = 1
         np.random.shuffle(mask)
-        
+
         indices = torch.tensor(mask)
-        
+
         if subsample:
             new_data = Data()
             for key in data.keys:
@@ -543,26 +558,25 @@ class SBUBData(InMemoryDataset):
                 setattr(new_data, key, item)
         else:
             new_data = data
-            
+
         # random_r = Rotation.random().as_matrix()
         # points = random_r.dot(new_data.pos.T).T.astype('float32')
-        
+
         # new_data.pos = points
         return new_data
-    
+
     def _get_random(self):
         chosen_plant = np.random.randint(len(self.data))
         data = self.data[chosen_plant]
-        
+
         # subsampling mask
         num_points = data.pos.shape[0]
-        mask = np.zeros(num_points, dtype='bool')
+        mask = np.zeros(num_points, dtype="bool")
         mask[:100000] = 1
         np.random.shuffle(mask)
-        
+
         indices = torch.tensor(mask)
-        
-        
+
         new_data = Data()
         for key in data.keys:
             if key == "kd_tree":
@@ -573,10 +587,10 @@ class SBUBData(InMemoryDataset):
             elif torch.is_tensor(item):
                 item = item.clone()
             setattr(new_data, key, item)
-            
+
         # random_r = Rotation.random().as_matrix()
         # points = random_r.dot(new_data.pos.T).T.astype('float32')
-        
+
         # new_data.pos = points
         return new_data
 
@@ -610,7 +624,7 @@ class SBUBData(InMemoryDataset):
 
 
 class SBUBDataset(BaseDataset):
-    """ Wrapper around S3DISSphere that creates train and test datasets.
+    """Wrapper around S3DISSphere that creates train and test datasets.
 
     http://buildingparser.stanford.edu/dataset.html
 
@@ -665,7 +679,7 @@ class SBUBDataset(BaseDataset):
 
     @staticmethod
     def to_ply(pos, label, file):
-        """ Allows to save s3dis predictions to disk using s3dis color scheme
+        """Allows to save s3dis predictions to disk using s3dis color scheme
 
         Parameters
         ----------
@@ -690,7 +704,3 @@ class SBUBDataset(BaseDataset):
         from torch_points3d.metrics.s3dis_tracker import S3DISTracker
 
         return S3DISTracker(self, wandb_log=wandb_log, use_tensorboard=tensorboard_log)
-
-
-                             
-        

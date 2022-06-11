@@ -6,7 +6,7 @@ task: panoptic
 class: sbub.SBUBDataset
 dataroot: data
 fold: 5
-first_subsampling: 0.003
+first_subsampling: 0.002
 grid_size: ${data.first_subsampling}
 keep_instance: True
 use_category: False
